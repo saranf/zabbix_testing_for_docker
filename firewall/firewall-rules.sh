@@ -5,7 +5,18 @@
 # iptables 기반 보안 설정
 #############################################
 
+# 환경 변수에서 포트 읽기 (기본값 설정)
+SSH_PORT=${SSH_PORT:-22}
+HTTP_PORT=${HTTP_PORT:-80}
+HTTPS_PORT=${HTTPS_PORT:-443}
+ZABBIX_SERVER_PORT=${ZABBIX_SERVER_PORT:-10847}
+
 echo "[FIREWALL] 방화벽 규칙 적용 중..."
+echo "[FIREWALL] 설정된 포트:"
+echo "[FIREWALL]   SSH: $SSH_PORT"
+echo "[FIREWALL]   HTTP: $HTTP_PORT"
+echo "[FIREWALL]   HTTPS: $HTTPS_PORT"
+echo "[FIREWALL]   Zabbix Server: $ZABBIX_SERVER_PORT"
 
 # 기본 정책: 모든 INPUT 차단, OUTPUT 허용
 iptables -P INPUT DROP
@@ -54,29 +65,29 @@ ip6tables -A INPUT -p ipv6-icmp -j DROP
 
 echo "[FIREWALL] ICMP Rate Limiting 설정"
 
-# SSH (포트 22) - Rate Limiting으로 브루트포스 방지
-iptables -A INPUT -p tcp --dport 22 -m state --state NEW -m recent --set --name SSH
-iptables -A INPUT -p tcp --dport 22 -m state --state NEW -m recent --update --seconds 60 --hitcount 4 --name SSH -j DROP
-iptables -A INPUT -p tcp --dport 22 -j ACCEPT
+# SSH - Rate Limiting으로 브루트포스 방지
+iptables -A INPUT -p tcp --dport $SSH_PORT -m state --state NEW -m recent --set --name SSH
+iptables -A INPUT -p tcp --dport $SSH_PORT -m state --state NEW -m recent --update --seconds 60 --hitcount 4 --name SSH -j DROP
+iptables -A INPUT -p tcp --dport $SSH_PORT -j ACCEPT
 
-echo "[FIREWALL] SSH 포트 허용 (브루트포스 방지)"
+echo "[FIREWALL] SSH 포트 $SSH_PORT 허용 (브루트포스 방지)"
 
-# HTTP (포트 80) - Rate Limiting
-iptables -A INPUT -p tcp --dport 80 -m state --state NEW -m limit --limit 100/minute --limit-burst 200 -j ACCEPT
-iptables -A INPUT -p tcp --dport 80 -m state --state NEW -j DROP
+# HTTP - Rate Limiting
+iptables -A INPUT -p tcp --dport $HTTP_PORT -m state --state NEW -m limit --limit 100/minute --limit-burst 200 -j ACCEPT
+iptables -A INPUT -p tcp --dport $HTTP_PORT -m state --state NEW -j DROP
 
-echo "[FIREWALL] HTTP 포트 허용 (Rate Limiting)"
+echo "[FIREWALL] HTTP 포트 $HTTP_PORT 허용 (Rate Limiting)"
 
-# HTTPS (포트 443) - Rate Limiting
-iptables -A INPUT -p tcp --dport 443 -m state --state NEW -m limit --limit 100/minute --limit-burst 200 -j ACCEPT
-iptables -A INPUT -p tcp --dport 443 -m state --state NEW -j DROP
+# HTTPS - Rate Limiting
+iptables -A INPUT -p tcp --dport $HTTPS_PORT -m state --state NEW -m limit --limit 100/minute --limit-burst 200 -j ACCEPT
+iptables -A INPUT -p tcp --dport $HTTPS_PORT -m state --state NEW -j DROP
 
-echo "[FIREWALL] HTTPS 포트 허용 (Rate Limiting)"
+echo "[FIREWALL] HTTPS 포트 $HTTPS_PORT 허용 (Rate Limiting)"
 
-# Zabbix Server (포트 10847) - Zabbix Agent 통신용
-iptables -A INPUT -p tcp --dport 10847 -j ACCEPT
+# Zabbix Server - Zabbix Agent 통신용
+iptables -A INPUT -p tcp --dport $ZABBIX_SERVER_PORT -j ACCEPT
 
-echo "[FIREWALL] Zabbix Server 포트 허용"
+echo "[FIREWALL] Zabbix Server 포트 $ZABBIX_SERVER_PORT 허용"
 
 # SYN Flood 공격 방지
 iptables -A INPUT -p tcp --syn -m limit --limit 1/s --limit-burst 3 -j ACCEPT
@@ -137,10 +148,10 @@ echo "[FIREWALL] =========================================="
 echo "[FIREWALL] 방화벽 규칙 적용 완료!"
 echo "[FIREWALL] =========================================="
 echo "[FIREWALL] 허용된 포트:"
-echo "[FIREWALL]   - 22 (SSH) - 브루트포스 방지"
-echo "[FIREWALL]   - 80 (HTTP) - Rate Limiting"
-echo "[FIREWALL]   - 443 (HTTPS) - Rate Limiting"
-echo "[FIREWALL]   - 10847 (Zabbix Server)"
+echo "[FIREWALL]   - $SSH_PORT (SSH) - 브루트포스 방지"
+echo "[FIREWALL]   - $HTTP_PORT (HTTP) - Rate Limiting"
+echo "[FIREWALL]   - $HTTPS_PORT (HTTPS) - Rate Limiting"
+echo "[FIREWALL]   - $ZABBIX_SERVER_PORT (Zabbix Server)"
 echo "[FIREWALL] =========================================="
 
 # 현재 규칙 출력

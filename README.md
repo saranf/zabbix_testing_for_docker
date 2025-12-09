@@ -4,12 +4,13 @@ Docker를 사용한 Zabbix 모니터링 시스템 구축 프로젝트입니다.
 
 ## 📋 구성 요소
 
-- **Zabbix Server**: 모니터링 서버 (포트: 10847)
+- **Zabbix Server**: 모니터링 서버 (포트: 변경 가능, 기본 10847)
 - **Zabbix Web UI**: 웹 인터페이스 (내부 포트: 8080)
 - **PostgreSQL**: 데이터베이스 (내부 네트워크만)
 - **Zabbix Agent**: 자체 모니터링용 에이전트
-- **Nginx Reverse Proxy**: 보안 강화 리버스 프록시 (포트: 80, 443)
-- **Certbot**: SSL 인증서 자동 발급 및 갱신
+- **Nginx Reverse Proxy**: 보안 강화 리버스 프록시 (포트: 변경 가능, 기본 80, 443)
+- **Certbot**: SSL 인증서 자동 발급 및 갱신 (크론탭 내장)
+- **Firewall**: iptables 기반 방화벽 (포트 자동 적용)
 - **도메인**: zabbix.rmstudio.co.kr
 
 ## 🔐 보안 기능
@@ -26,6 +27,26 @@ Docker를 사용한 Zabbix 모니터링 시스템 구축 프로젝트입니다.
 - ✅ **악의적 패킷 차단** - XMAS, NULL, Invalid 패킷 필터링
 
 자세한 내용은 [SECURITY.md](SECURITY.md)를 참고하세요.
+
+## ⚙️ 포트 설정
+
+모든 포트는 `.env` 파일에서 변경 가능합니다:
+
+```env
+# 포트 설정 (원하는 포트로 변경 가능)
+HTTP_PORT=80
+HTTPS_PORT=443
+ZABBIX_SERVER_PORT=10847
+SSH_PORT=22
+```
+
+**포트 변경 후**:
+```bash
+docker-compose down
+docker-compose up -d
+```
+
+방화벽 규칙도 자동으로 변경된 포트에 맞춰 적용됩니다.
 
 ## 🚀 빠른 시작 (자동 설치)
 

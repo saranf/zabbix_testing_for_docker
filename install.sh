@@ -91,9 +91,9 @@ fi
 log_info "SSL 인증서 디렉토리 생성 중..."
 mkdir -p certbot/conf certbot/www
 
-# 5. 방화벽 컨테이너 빌드 및 실행
-log_info "방화벽 컨테이너 빌드 중..."
-docker-compose build zabbix-firewall
+# 5. 커스텀 컨테이너 빌드
+log_info "커스텀 컨테이너 빌드 중..."
+docker-compose build zabbix-firewall certbot
 
 log_info "방화벽 컨테이너 실행 중..."
 docker-compose up -d zabbix-firewall
@@ -131,8 +131,8 @@ log_info "Nginx 설정 완료"
 if [[ "$INSTALL_SSL" == "y" || "$INSTALL_SSL" == "Y" ]]; then
     log_info "SSL 인증서 발급 중..."
 
-    # Certbot으로 SSL 인증서 발급
-    docker-compose run --rm certbot certonly --webroot \
+    # Certbot으로 SSL 인증서 발급 (빌드된 이미지 사용)
+    docker-compose run --rm --entrypoint "certbot" certbot certonly --webroot \
         --webroot-path=/var/www/certbot \
         --email $EMAIL \
         --agree-tos \
@@ -148,11 +148,11 @@ if [[ "$INSTALL_SSL" == "y" || "$INSTALL_SSL" == "Y" ]]; then
         # Nginx 재시작하여 HTTPS 설정 적용
         docker-compose restart zabbix-reverse-proxy
 
-        # Certbot 자동 갱신 컨테이너 시작
+        # Certbot 자동 갱신 컨테이너 시작 (크론탭 내장)
         docker-compose up -d certbot
 
         log_info "SSL 인증서 설치 완료"
-        log_info "자동 갱신이 설정되었습니다."
+        log_info "자동 갱신이 설정되었습니다 (매일 오전 2시 크론탭 실행)"
     else
         log_error "SSL 인증서 발급 실패"
         log_warn "HTTP로 계속 진행합니다."

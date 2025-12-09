@@ -58,10 +58,35 @@ Internet
 - `zabbix-web:8080` - 웹 UI
 - `zabbix-server:10051` - 서버 내부 포트
 
-**외부 노출 포트**:
-- `80` - HTTP (HTTPS로 리다이렉트)
-- `443` - HTTPS (Nginx Reverse Proxy)
-- `10847` - Zabbix Server (Agent 통신용)
+**외부 노출 포트** (`.env`에서 변경 가능):
+- `${HTTP_PORT:-80}` - HTTP (HTTPS로 리다이렉트)
+- `${HTTPS_PORT:-443}` - HTTPS (Nginx Reverse Proxy)
+- `${ZABBIX_SERVER_PORT:-10847}` - Zabbix Server (Agent 통신용)
+- `${SSH_PORT:-22}` - SSH (방화벽 설정용)
+
+---
+
+## 포트 설정
+
+모든 포트는 `.env` 파일에서 중앙 관리됩니다:
+
+```env
+# 포트 설정 (원하는 포트로 변경 가능)
+HTTP_PORT=80
+HTTPS_PORT=443
+ZABBIX_SERVER_PORT=10847
+SSH_PORT=22
+```
+
+**포트 변경 방법**:
+1. `.env` 파일에서 원하는 포트로 변경
+2. `docker-compose down && docker-compose up -d` 실행
+3. 방화벽 규칙이 자동으로 새 포트에 맞춰 적용됨
+
+**주의사항**:
+- 포트 변경 시 DNS 설정이나 외부 방화벽도 함께 변경 필요
+- 1024 이하 포트는 root 권한 필요
+- 다른 서비스와 포트 충돌 주의
 
 ---
 
@@ -144,17 +169,24 @@ Internet
 
 ### 5. certbot (SSL 인증서 관리)
 
-**이미지**: `certbot/certbot:latest`  
+**이미지**: 커스텀 빌드 (certbot/certbot:latest 기반)
 **역할**: SSL 인증서 자동 관리
 
 **주요 기능**:
 - Let's Encrypt 인증서 발급
-- 12시간마다 갱신 체크
+- **크론탭 내장** - 매일 오전 2시 자동 갱신 체크
 - 만료 30일 전 자동 갱신
+- Nginx 자동 재시작 (인증서 갱신 시)
+
+**크론탭 설정**:
+```
+0 2 * * * /usr/local/bin/renew-certs.sh
+```
 
 **볼륨**:
 - `./certbot/conf` - 인증서 저장
 - `./certbot/www` - ACME Challenge
+- `/var/run/docker.sock` - Nginx 재시작용 (선택사항)
 
 ---
 

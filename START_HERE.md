@@ -99,7 +99,25 @@ Internet → Nginx (보안 프록시) → Zabbix Web → Zabbix Server → Postg
 
 ## 🔧 설치 후 할 일
 
-### 1. 비밀번호 변경 (필수!)
+### 1. 포트 변경 (선택사항)
+
+`.env` 파일에서 포트 변경:
+```bash
+# 포트 설정 (원하는 포트로 변경 가능)
+HTTP_PORT=80
+HTTPS_PORT=443
+ZABBIX_SERVER_PORT=10847
+SSH_PORT=22
+```
+
+재시작:
+```bash
+docker-compose down && docker-compose up -d
+```
+
+**방화벽 규칙도 자동으로 변경된 포트에 맞춰 적용됩니다!**
+
+### 2. 비밀번호 변경 (필수!)
 
 #### Zabbix Admin
 1. Zabbix 웹 UI 로그인
@@ -117,15 +135,19 @@ POSTGRES_PASSWORD=your_very_strong_password
 docker-compose down && docker-compose up -d
 ```
 
-### 2. 방화벽 설정
+### 3. 방화벽 확인
+
+**Docker 방화벽이 자동으로 설정됩니다!**
+
 ```bash
-sudo ufw allow 80/tcp
-sudo ufw allow 443/tcp
-sudo ufw allow 10847/tcp
-sudo ufw enable
+# 방화벽 상태 확인
+./firewall-manage.sh status
+
+# 방화벽 규칙 확인
+./firewall-manage.sh rules
 ```
 
-### 3. 보안 테스트
+### 4. 보안 테스트
 ```bash
 ./test-security.sh
 ```
