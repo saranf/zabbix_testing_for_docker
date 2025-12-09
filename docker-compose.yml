@@ -117,6 +117,22 @@ services:
     networks:
       - zabbix-network
 
+  # Firewall (iptables-based security)
+  zabbix-firewall:
+    build:
+      context: ./firewall
+      dockerfile: Dockerfile
+    container_name: zabbix-firewall
+    restart: unless-stopped
+    network_mode: host
+    cap_add:
+      - NET_ADMIN
+      - NET_RAW
+    privileged: true
+    labels:
+      - "com.zabbix.description=iptables Firewall"
+      - "com.zabbix.component=security"
+
   # Zabbix Agent (for monitoring the Zabbix server itself)
   zabbix-agent:
     image: zabbix/zabbix-agent:alpine-6.4-latest

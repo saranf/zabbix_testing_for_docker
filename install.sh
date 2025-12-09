@@ -91,7 +91,19 @@ fi
 log_info "SSL 인증서 디렉토리 생성 중..."
 mkdir -p certbot/conf certbot/www
 
-# 5. Zabbix Docker 컨테이너 실행 (Nginx 포함)
+# 5. 방화벽 컨테이너 빌드 및 실행
+log_info "방화벽 컨테이너 빌드 중..."
+docker-compose build zabbix-firewall
+
+log_info "방화벽 컨테이너 실행 중..."
+docker-compose up -d zabbix-firewall
+
+# 방화벽 적용 대기
+sleep 5
+
+log_info "방화벽 규칙 적용 완료"
+
+# 6. Zabbix Docker 컨테이너 실행 (Nginx 포함)
 log_info "Zabbix Docker 컨테이너 실행 중..."
 docker-compose up -d postgres-server zabbix-server zabbix-web zabbix-agent
 
@@ -99,7 +111,7 @@ docker-compose up -d postgres-server zabbix-server zabbix-web zabbix-agent
 log_info "Zabbix 서비스 시작 대기 중 (약 30초)..."
 sleep 30
 
-# 6. Nginx 리버스 프록시 설정
+# 7. Nginx 리버스 프록시 설정
 log_info "Nginx 리버스 프록시 설정 중..."
 
 # 도메인을 nginx 설정 파일에 업데이트
@@ -115,7 +127,7 @@ sleep 5
 
 log_info "Nginx 설정 완료"
 
-# 7. SSL 인증서 설치
+# 8. SSL 인증서 설치
 if [[ "$INSTALL_SSL" == "y" || "$INSTALL_SSL" == "Y" ]]; then
     log_info "SSL 인증서 발급 중..."
 
@@ -167,12 +179,18 @@ log_info ""
 log_warn "⚠️  보안을 위해 첫 로그인 후 반드시 비밀번호를 변경하세요!"
 log_info ""
 log_info "적용된 보안 설정:"
+log_info "  ✓ Docker 방화벽 (iptables)"
 log_info "  ✓ HTTPS/TLS 1.2+ 강제"
 log_info "  ✓ 보안 헤더 (HSTS, CSP, X-Frame-Options 등)"
 log_info "  ✓ Rate Limiting (DDoS 방지)"
 log_info "  ✓ SSL/TLS 최신 암호화 스위트"
 log_info "  ✓ OCSP Stapling"
 log_info "  ✓ 서버 정보 숨김"
+log_info "  ✓ SSH 브루트포스 방지"
+log_info "  ✓ Port Scanning 방지"
+log_info ""
+log_info "방화벽 상태 확인:"
+log_info "  docker-compose logs zabbix-firewall"
 log_info ""
 log_info "유용한 명령어:"
 log_info "  상태 확인: docker-compose ps"

@@ -4,7 +4,77 @@
 
 ## 📋 적용된 보안 설정 목록
 
-### 1. SSL/TLS 보안
+### 1. Docker 방화벽 (iptables)
+
+#### ✅ 포트 기반 접근 제어
+
+**허용된 포트**:
+- **22** (SSH) - 브루트포스 방지 (1분에 4회 제한)
+- **80** (HTTP) - Rate Limiting (분당 100회)
+- **443** (HTTPS) - Rate Limiting (분당 100회)
+- **10847** (Zabbix Server) - Agent 통신용
+
+**기본 정책**:
+- INPUT: DROP (모든 입력 차단, 허용된 포트만 예외)
+- FORWARD: DROP (포워딩 차단)
+- OUTPUT: ACCEPT (출력 허용)
+
+#### ✅ SSH 브루트포스 방지
+
+```bash
+# 1분에 4회 이상 SSH 연결 시도 시 차단
+iptables -A INPUT -p tcp --dport 22 -m state --state NEW -m recent --set --name SSH
+iptables -A INPUT -p tcp --dport 22 -m state --state NEW -m recent --update --seconds 60 --hitcount 4 --name SSH -j DROP
+```
+
+#### ✅ DDoS 공격 방지
+
+**SYN Flood 방지**:
+```bash
+iptables -A INPUT -p tcp --syn -m limit --limit 1/s --limit-burst 3 -j ACCEPT
+iptables -A INPUT -p tcp --syn -j DROP
+```
+
+**HTTP/HTTPS Rate Limiting**:
+```bash
+iptables -A INPUT -p tcp --dport 80 -m state --state NEW -m limit --limit 100/minute --limit-burst 200 -j ACCEPT
+iptables -A INPUT -p tcp --dport 443 -m state --state NEW -m limit --limit 100/minute --limit-burst 200 -j ACCEPT
+```
+
+#### ✅ Port Scanning 방지
+
+```bash
+iptables -N port-scanning
+iptables -A port-scanning -p tcp --tcp-flags SYN,ACK,FIN,RST RST -m limit --limit 1/s --limit-burst 2 -j RETURN
+iptables -A port-scanning -j DROP
+```
+
+#### ✅ 악의적 패킷 차단
+
+- **Invalid 패킷 차단**: 비정상적인 상태의 패킷 필터링
+- **Fragmented 패킷 차단**: 조각난 패킷 차단
+- **XMAS 패킷 차단**: 모든 플래그가 설정된 패킷 차단
+- **NULL 패킷 차단**: 플래그가 없는 패킷 차단
+
+#### ✅ 방화벽 관리
+
+```bash
+# 방화벽 상태 확인
+./firewall-manage.sh status
+
+# 방화벽 규칙 확인
+./firewall-manage.sh rules
+
+# 방화벽 로그 확인
+./firewall-manage.sh logs
+
+# 방화벽 재시작
+./firewall-manage.sh restart
+```
+
+---
+
+### 2. SSL/TLS 보안
 
 #### ✅ 강력한 암호화 프로토콜
 - **TLS 1.2 및 TLS 1.3만 허용** (TLS 1.0, 1.1 비활성화)
@@ -31,7 +101,7 @@ ssl_stapling_verify on;
 
 ---
 
-### 2. 보안 헤더
+### 3. 보안 헤더
 
 #### ✅ HSTS (HTTP Strict Transport Security)
 - **2년간 HTTPS 강제**
@@ -90,7 +160,7 @@ Permissions-Policy: geolocation=(), microphone=(), camera=()
 
 ---
 
-### 3. Rate Limiting (DDoS 방지)
+### 4. Rate Limiting (Nginx - 애플리케이션 레벨)
 
 #### ✅ 일반 요청 제한
 - **초당 10개 요청** 제한
@@ -120,7 +190,7 @@ limit_conn addr 10;
 
 ---
 
-### 4. 서버 정보 보호
+### 5. 서버 정보 보호
 
 #### ✅ 서버 버전 숨김
 ```nginx
@@ -134,7 +204,7 @@ proxy_hide_header X-Powered-By;
 
 ---
 
-### 5. 요청 크기 및 타임아웃 제한
+### 6. 요청 크기 및 타임아웃 제한
 
 #### ✅ 클라이언트 요청 크기 제한
 - **최대 업로드 크기: 10MB**
@@ -158,7 +228,7 @@ send_timeout 10;
 
 ---
 
-### 6. 파일 접근 제어
+### 7. 파일 접근 제어
 
 #### ✅ 숨겨진 파일 차단
 ```nginx
@@ -178,7 +248,7 @@ location ~* \.(conf|sql|bak|backup|old|log)$ {
 
 ---
 
-### 7. 데이터베이스 보안
+### 8. 데이터베이스 보안
 
 #### ✅ 네트워크 격리
 - PostgreSQL은 **내부 Docker 네트워크에만 노출**
@@ -189,7 +259,7 @@ location ~* \.(conf|sql|bak|backup|old|log)$ {
 
 ---
 
-### 8. Docker 보안
+### 9. Docker 보안
 
 #### ✅ 읽기 전용 설정 파일
 ```yaml
@@ -232,19 +302,35 @@ docker-compose up -d
 
 ---
 
-### 2. 방화벽 설정
+### 2. 방화벽 확인
 
-#### UFW (Ubuntu)
+**Docker 방화벽이 자동으로 설정됩니다!**
+
+```bash
+# 방화벽 상태 확인
+./firewall-manage.sh status
+
+# 방화벽 규칙 확인
+./firewall-manage.sh rules
+
+# 방화벽 로그 확인
+./firewall-manage.sh logs
+```
+
+#### 추가 시스템 방화벽 (선택사항)
+
+**UFW (Ubuntu)**:
 ```bash
 sudo ufw default deny incoming
 sudo ufw default allow outgoing
 sudo ufw allow 22/tcp    # SSH
 sudo ufw allow 80/tcp    # HTTP
 sudo ufw allow 443/tcp   # HTTPS
+sudo ufw allow 10847/tcp # Zabbix Server
 sudo ufw enable
 ```
 
-#### iptables
+**iptables (수동 설정 시)**:
 ```bash
 # 기본 정책
 iptables -P INPUT DROP

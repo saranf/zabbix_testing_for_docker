@@ -6,9 +6,13 @@
 postgres-data/
 zabbix-data/
 
+# Certbot
+certbot/
+
 # Logs
 *.log
 logs/
+firewall/*.log
 
 # OS files
 .DS_Store

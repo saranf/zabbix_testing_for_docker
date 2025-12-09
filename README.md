@@ -14,6 +14,7 @@ Docker를 사용한 Zabbix 모니터링 시스템 구축 프로젝트입니다.
 
 ## 🔐 보안 기능
 
+- ✅ **Docker 방화벽 (iptables)** - 포트 기반 접근 제어, SSH 브루트포스 방지, DDoS 방지
 - ✅ **HTTPS/TLS 1.2+ 강제** - 최신 암호화 프로토콜
 - ✅ **보안 헤더** - HSTS, CSP, X-Frame-Options 등
 - ✅ **Rate Limiting** - DDoS 및 브루트포스 공격 방지
@@ -21,6 +22,8 @@ Docker를 사용한 Zabbix 모니터링 시스템 구축 프로젝트입니다.
 - ✅ **서버 정보 숨김** - 버전 정보 노출 방지
 - ✅ **파일 접근 제어** - 민감한 파일 차단
 - ✅ **네트워크 격리** - 데이터베이스 외부 접근 차단
+- ✅ **Port Scanning 방지** - 포트 스캔 시도 차단
+- ✅ **악의적 패킷 차단** - XMAS, NULL, Invalid 패킷 필터링
 
 자세한 내용은 [SECURITY.md](SECURITY.md)를 참고하세요.
 
@@ -95,9 +98,11 @@ curl -I https://zabbix.rmstudio.co.kr
 
 | 스크립트 | 설명 |
 |---------|------|
-| `install.sh` | 전체 자동 설치 (Docker, Nginx, SSL, Zabbix) |
+| `install.sh` | 전체 자동 설치 (Docker, 방화벽, Nginx, SSL, Zabbix) |
 | `check-requirements.sh` | 설치 전 시스템 요구사항 체크 |
 | `setup-ssl-renewal.sh` | SSL 인증서 자동 갱신 설정 |
+| `firewall-manage.sh` | 방화벽 관리 (상태, 규칙, 로그 확인) |
+| `test-security.sh` | 보안 설정 테스트 |
 | `uninstall.sh` | Zabbix 완전 제거 |
 
 ## 🔧 Nginx 리버스 프록시 설정 (수동)
@@ -224,6 +229,39 @@ docker-compose up -d
 
 ### 3. 방화벽 설정
 
+**Docker 방화벽이 자동으로 설정됩니다!** 🎉
+
+설치 스크립트가 자동으로 iptables 기반 방화벽 컨테이너를 설정합니다.
+
+#### 방화벽 관리
+
+```bash
+# 방화벽 상태 확인
+./firewall-manage.sh status
+
+# 방화벽 규칙 확인
+./firewall-manage.sh rules
+
+# 방화벽 로그 확인
+./firewall-manage.sh logs
+
+# 방화벽 재시작
+./firewall-manage.sh restart
+
+# 포트 테스트
+./firewall-manage.sh test
+```
+
+#### 허용된 포트
+- **22** (SSH) - 브루트포스 방지 (1분에 4회 제한)
+- **80** (HTTP) - Rate Limiting (분당 100회)
+- **443** (HTTPS) - Rate Limiting (분당 100회)
+- **10847** (Zabbix Server) - Agent 통신용
+
+#### 추가 방화벽 (선택사항)
+
+시스템 방화벽(UFW)을 추가로 사용할 수도 있습니다:
+
 ```bash
 # UFW 사용 시
 sudo ufw default deny incoming
@@ -231,7 +269,7 @@ sudo ufw default allow outgoing
 sudo ufw allow 22/tcp     # SSH
 sudo ufw allow 80/tcp     # HTTP
 sudo ufw allow 443/tcp    # HTTPS
-sudo ufw allow 10847/tcp  # Zabbix Server (Agent 통신용)
+sudo ufw allow 10847/tcp  # Zabbix Server
 sudo ufw enable
 ```
 
